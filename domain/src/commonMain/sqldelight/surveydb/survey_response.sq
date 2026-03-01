@@ -1,0 +1,24 @@
+CREATE TABLE survey_response (
+    id TEXT PRIMARY KEY,            -- UUID of survey
+    farmerId TEXT NOT NULL,
+    answersJson TEXT NOT NULL,      -- JSON serialized SurveyResponse
+    status TEXT NOT NULL,           -- PENDING, SYNCED, FAILED
+    timestamp TEXT NOT NULL         -- ISO string from kotlinx-datetime
+);
+
+-- Queries
+selectResponsesByStatus:
+SELECT * FROM survey_response WHERE status = ?;
+
+updateStatus:
+UPDATE survey_response SET status = ? WHERE id = ?;
+
+getResponsesByStatus:
+SELECT * FROM survey_response WHERE status = ?;
+
+getResponsesByFarmer:
+SELECT * FROM survey_response WHERE farmerId = ?;
+
+insertSurveyResponse:
+INSERT INTO survey_response(id, farmerId, answersJson, status, timestamp)
+VALUES (?, ?, ?, ?, ?);

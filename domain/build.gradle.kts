@@ -2,7 +2,15 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.androidLint)
-    kotlin("plugin.serialization") version "1.9.10"
+    kotlin("plugin.serialization") version "1.9.0" // or your Kotlin version
+    id("com.squareup.sqldelight") version "1.5.5"
+}
+
+sqldelight {
+    database("SurveyDatabase") {
+        packageName = "surveydb"   // this becomes the Kotlin package
+        sourceFolders = listOf("sqldelight")
+    }
 }
 
 kotlin {
@@ -58,32 +66,48 @@ kotlin {
     // common to share sources between related targets.
     // See: https://kotlinlang.org/docs/multiplatform-hierarchy.html
     sourceSets {
-        commonMain {
+        val commonMain by getting {
             dependencies {
                 implementation(libs.kotlin.stdlib)
-                // Add KMP dependencies here
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("com.squareup.sqldelight:runtime:1.5.5")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.1") // or latest
+                implementation("io.ktor:ktor-client-core:2.3.2")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.2")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.2")
             }
         }
 
-        commonTest {
+        val commonTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
             }
         }
 
-        androidMain {
+        val androidMain by getting {
             dependencies {
-                // Add Android-specific dependencies here. Note that this source set depends on
-                // commonMain by default and will correctly pull the Android artifacts of any KMP
-                // dependencies declared in commonMain.
-
                 implementation("androidx.work:work-runtime-ktx:2.8.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-                // Kotlinx Serialization
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+                implementation("com.squareup.sqldelight:android-driver:1.5.5")
+                implementation("io.ktor:ktor-client-okhttp:2.3.2")
             }
         }
+
+        // Create a shared iOS source set
+        val iosMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+                implementation("com.squareup.sqldelight:native-driver:1.5.5")
+                implementation("io.ktor:ktor-client-darwin:2.3.2")
+            }
+        }
+
+        // Link each iOS target to iosMain
+        getByName("iosX64Main").dependsOn(iosMain)
+        getByName("iosArm64Main").dependsOn(iosMain)
+        getByName("iosSimulatorArm64Main").dependsOn(iosMain)
 
         getByName("androidDeviceTest") {
             dependencies {
@@ -92,16 +116,5 @@ kotlin {
                 implementation(libs.androidx.testExt.junit)
             }
         }
-
-        iosMain {
-            dependencies {
-                // Add iOS-specific dependencies here. This a source set created by Kotlin Gradle
-                // Plugin (KGP) that each specific iOS target (e.g., iosX64) depends on as
-                // part of KMP’s default source set hierarchy. Note that this source set depends
-                // on common by default and will correctly pull the iOS artifacts of any
-                // KMP dependencies declared in commonMain.
-            }
-        }
     }
-
 }

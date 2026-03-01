@@ -15,7 +15,7 @@ class IOSNetworkMonitor: NetworkMonitor {
         monitor.start(queue: DispatchQueue.global())
     }
 
-    func isLikelyAvailable() -> Bool {
+    func isAvailableForSync() -> Bool {
         return available
     }
 }

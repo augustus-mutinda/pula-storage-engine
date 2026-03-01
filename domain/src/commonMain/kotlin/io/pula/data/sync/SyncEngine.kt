@@ -1,8 +1,11 @@
 package io.pula.data.sync
 
 import io.pula.data.data.SurveyRepository
+import io.pula.data.data.SurveyRepositoryImpl
+import io.pula.data.models.SurveyResponse
 import io.pula.data.models.SyncError
 import io.pula.data.models.SyncResult
+import io.pula.data.models.SyncStatus
 import io.pula.data.network.ApiResult
 import io.pula.data.network.NetworkMonitor
 import io.pula.data.network.SurveyApi
@@ -10,27 +13,36 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class SyncEngine(
-    private val repository: SurveyRepository,
-    private val api: SurveyApi,
     private val networkMonitor: NetworkMonitor
 ) {
+    private val surveyApi = SurveyApi()
+    private val repository: SurveyRepository = SurveyRepositoryImpl()
     private val mutex = Mutex()
 
+    /**
+     * Sync all pending surveys.
+     * Stops early if network is lost or degraded.
+     */
     suspend fun sync(): SyncResult = mutex.withLock {
 
-        if (!networkMonitor.isLikelyAvailable()) {
+        if (!networkMonitor.isAvailableForSync()) {
             return SyncResult(
-                emptyList(),
-                emptyList(),
+                succeeded = emptyList(),
+                failed = emptyList(),
                 stoppedEarly = true,
-                reason = "No network"
+                reason = "No network available"
             )
         }
 
-        val pending = repository.getPending()
+        val pending = repository.getPendingResponses()
 
         if (pending.isEmpty()) {
-            return SyncResult(emptyList(), emptyList(), false, null)
+            return SyncResult(
+                succeeded = emptyList(),
+                failed = emptyList(),
+                stoppedEarly = false,
+                reason = null
+            )
         }
 
         val succeeded = mutableListOf<String>()
@@ -38,40 +50,38 @@ class SyncEngine(
 
         for (survey in pending) {
 
-            if (!networkMonitor.isLikelyAvailable()) {
+            // Check network mid-sync
+            if (!networkMonitor.isAvailableForSync()) {
                 return SyncResult(
-                    succeeded,
-                    failed,
+                    succeeded = succeeded,
+                    failed = failed,
                     stoppedEarly = true,
                     reason = "Network lost mid-sync"
                 )
             }
 
-            repository.markInProgress(survey.id)
+            // Mark as in-progress
+            repository.markInProgress(listOf(survey.id))
 
-            when (val result = api.uploadSurvey(survey)) {
+            // Attempt upload
+            when (val result = surveyApi.uploadSurvey(survey)) {
 
                 is ApiResult.Success -> {
-                    repository.markSynced(survey.id)
+                    repository.markAsSynced(listOf(survey.id))
                     succeeded.add(survey.id)
                 }
 
-                else -> {
-                    val error = (result as ApiResult.Failure).error
+                is ApiResult.Failure -> {
+                    val error = result.error
 
-                    repository.markFailed(
-                        survey.id,
-                        retry = error.shouldRetry
-                    )
-
+                    repository.markAsFailed(listOf(survey.id))
                     failed.add(survey.id)
 
-                    if (error is SyncError.NetworkUnavailable ||
-                        error is SyncError.Timeout
-                    ) {
+                    // Stop early if network-related error
+                    if (error is SyncError.NetworkUnavailable || error is SyncError.Timeout) {
                         return SyncResult(
-                            succeeded,
-                            failed,
+                            succeeded = succeeded,
+                            failed = failed,
                             stoppedEarly = true,
                             reason = "Network degradation"
                         )
@@ -80,6 +90,19 @@ class SyncEngine(
             }
         }
 
-        SyncResult(succeeded, failed, false, null)
+        // Finished syncing
+        return SyncResult(
+            succeeded = succeeded,
+            failed = failed,
+            stoppedEarly = false,
+            reason = null
+        )
+    }
+
+    /**
+     * Offline-first save locally, mark as pending for next sync. If network is available, can trigger immediate sync.
+     */
+    suspend fun saveOrUploadSurvey(survey: SurveyResponse) {
+        repository.saveSurveyResponse(survey.copy(status = SyncStatus.PENDING))
     }
 }
