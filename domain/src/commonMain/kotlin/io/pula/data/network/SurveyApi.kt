@@ -17,9 +17,9 @@ sealed class ApiResult {
     data class Failure(val error: SyncError) : ApiResult()
 }
 
-class SurveyApi() {
+open class SurveyApi() {
 
-    suspend fun uploadSurvey(survey: SurveyResponse): ApiResult {
+    open suspend fun uploadSurvey(survey: SurveyResponse): ApiResult {
         return try {
             val response: HttpResponse = client.post("$baseUrl/surveys") {
                 contentType(ContentType.Application.Json)

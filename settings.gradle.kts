@@ -1,4 +1,4 @@
-rootProject.name = "Pula"
+rootProject.name = "Augustuss-Pula-Test"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

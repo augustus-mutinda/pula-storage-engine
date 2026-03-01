@@ -7,3 +7,7 @@ interface SyncScheduler {
 expect class PlatformSyncScheduler() : SyncScheduler {
     override fun triggerSync()
 }
+
+fun scheduleSync() {
+    PlatformSyncScheduler().triggerSync()
+}

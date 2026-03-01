@@ -13,10 +13,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 class SyncEngine(
-    private val networkMonitor: NetworkMonitor
-) {
-    private val surveyApi = SurveyApi()
+    private val networkMonitor: NetworkMonitor,
+    private val surveyApi: SurveyApi = SurveyApi(),
     private val repository: SurveyRepository = SurveyRepositoryImpl()
+) {
     private val mutex = Mutex()
 
     /**
