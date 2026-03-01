@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.androidLint)
+    kotlin("plugin.serialization") version "1.9.10"
 }
 
 kotlin {
@@ -61,6 +62,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.stdlib)
                 // Add KMP dependencies here
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
             }
         }
 
@@ -75,6 +77,11 @@ kotlin {
                 // Add Android-specific dependencies here. Note that this source set depends on
                 // commonMain by default and will correctly pull the Android artifacts of any KMP
                 // dependencies declared in commonMain.
+
+                implementation("androidx.work:work-runtime-ktx:2.8.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+                // Kotlinx Serialization
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
             }
         }
 
