@@ -87,6 +87,14 @@ kotlin {
             }
         }
 
+        val androidHostTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(kotlin("test"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+            }
+        }
+
         val androidMain by getting {
             dependencies {
                 implementation("androidx.work:work-runtime-ktx:2.8.0")
